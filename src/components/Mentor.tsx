@@ -36,8 +36,8 @@ export function Mentor() {
     try {
       const resp = await callGemini(fullPrompt, sysPrompt);
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: "mentor", content: resp || "Lo siento, tuve un problema." }]);
-    } catch (e) {
-      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: "mentor", content: "Lo siento, hubo un error técnico de conexión." }]);
+    } catch (e: any) {
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: "mentor", content: `Error: ${e.message || "Hubo un problema de conexión con la IA."}` }]);
     } finally {
       setIsLoading(false);
     }

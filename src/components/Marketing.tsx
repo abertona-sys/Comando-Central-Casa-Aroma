@@ -21,8 +21,9 @@ export function Marketing() {
     try {
       const resp = await callGemini(prompt, sysPrompt);
       setResult(resp || "No se pudo generar la respuesta.");
-    } catch (e) {
-      setResult("Ocurrió un error de red o de API.");
+    } catch (e: any) {
+      console.error("Marketing error:", e);
+      setResult(`Error de IA: ${e.message || "Ocurrió un error inesperado al llamar a la IA."}`);
     } finally {
       setLoading(false);
     }
