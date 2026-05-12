@@ -1,0 +1,38 @@
+{
+  "entities": {
+    "InventoryItem": {
+      "title": "Inventory Item",
+      "description": "An item in the user's inventory",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "string"
+        },
+        "iconType": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["name", "quantity", "userId", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}/inventory/{itemId}": {
+      "schema": "InventoryItem",
+      "description": "Stores inventory items for a specific user."
+    }
+  }
+}

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <title>Comando Central Aroma</title>
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: { rose: {"50":"#fff1f2","100":"#ffe4e6","500":"#f43f5e","600":"#e11d48"}, fuchsia: {"50":"#fdf4ff","100":"#fae8ff","600":"#c026d3"} }
+          }
+        }
+      }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+      body { -webkit-tap-highlight-color: transparent; }
+      .tab-content { display: none; }
+      .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      .markdown-body p { margin-bottom: 0.75rem; line-height: 1.5; }
+      .markdown-body strong { font-weight: 600; color: #1e293b; }
+    </style>
+  </head>
+  <body class="bg-slate-50 text-slate-800 font-sans pb-24">
+    
+    <!-- Top Header -->
+    <header class="bg-white/90 backdrop-blur border-b border-slate-100 p-5 sticky top-0 z-10 shadow-sm">
+      <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-rose-500 to-fuchsia-600">Comando Central Aroma</h1>
+      <p class="text-xs font-semibold text-slate-400">SISTEMA INTELIGENTE</p>
+    </header>
+
+    <!-- VIEWS -->
+    <main class="p-5">
+      
+      <!-- INVENTORY VIEW -->
+      <section id="view-inventory" class="tab-content active space-y-4">
+        <div class="bg-rose-50 p-4 rounded-2xl border border-rose-100">
+          <h2 class="text-lg font-bold text-rose-900 mb-1">Tu Inventario</h2>
+          <p class="text-sm text-rose-700 mb-4">Insumos disponibles en Google Sheets.</p>
+          <div id="inventory-list" class="space-y-2">
+            <div class="text-center text-sm py-4 text-slate-500 animate-pulse">Cargando inventario...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MARKETING VIEW -->
+      <section id="view-marketing" class="tab-content space-y-4">
+        <div class="bg-fuchsia-50 p-4 rounded-2xl border border-fuchsia-100">
+          <i data-lucide="sparkles" class="w-6 h-6 text-fuchsia-600 mb-2"></i>
+          <h2 class="text-lg font-bold text-fuchsia-900 mb-1">Marketing IA</h2>
+          <p class="text-sm text-fuchsia-700">Genera guiones de 15s para Reels/TikTok.</p>
+        </div>
+        <div class="space-y-3">
+          <input id="mkg-prod" type="text" placeholder="Producto (ej. Placa Lavanda)" class="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-fuchsia-300 outline-none">
+          <input id="mkg-niche" type="text" placeholder="Nicho/Ocasión (ej. Baby Shower)" class="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-fuchsia-300 outline-none">
+          <button onclick="generarMarketing()" id="btn-mkg" class="w-full bg-fuchsia-600 text-white font-bold p-4 rounded-xl active:scale-95 transition">Generar Guion</button>
+        </div>
+        <div id="mkg-result-box" class="hidden bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mt-4">
+          <div class="flex justify-between items-center border-b pb-2 mb-3">
+             <h3 class="font-bold text-sm text-fuchsia-900">Resultado</h3>
+             <button onclick="copiarTexto('mkg-res')" class="text-xs font-bold text-fuchsia-600 bg-fuchsia-50 px-2 py-1 rounded">COPIAR</button>
+          </div>
+          <div id="mkg-res" class="markdown-body text-sm"></div>
+        </div>
+      </section>
+
+      <!-- CRM VIEW -->
+      <section id="view-crm" class="tab-content space-y-4">
+        <div class="bg-teal-50 p-4 rounded-2xl border border-teal-100">
+          <i data-lucide="message-circle-heart" class="w-6 h-6 text-teal-600 mb-2"></i>
+          <h2 class="text-lg font-bold text-teal-900 mb-1">CRM y Ventas</h2>
+          <p class="text-sm text-teal-700">Mensajes de WhatsApp para recompras.</p>
+        </div>
+        <div class="space-y-3">
+          <input id="crm-name" type="text" placeholder="Nombre de Clienta" class="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-300 outline-none">
+          <input id="crm-purch" type="text" placeholder="Última compra" class="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-300 outline-none">
+          <input id="crm-days" type="number" placeholder="Días desde compra" class="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-teal-300 outline-none">
+          <button onclick="generarCRM()" id="btn-crm" class="w-full bg-teal-600 text-white font-bold p-4 rounded-xl active:scale-95 transition">Crear Mensaje</button>
+        </div>
+        <div id="crm-result-box" class="hidden bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mt-4">
+          <div class="flex justify-between items-center border-b pb-2 mb-3">
+             <h3 class="font-bold text-sm text-teal-900">Mensaje WhatsApp</h3>
+             <button onclick="copiarTexto('crm-res')" class="text-xs font-bold text-teal-600 bg-teal-50 px-2 py-1 rounded">COPIAR</button>
+          </div>
+          <div id="crm-res" class="markdown-body text-sm"></div>
+        </div>
+      </section>
+
+      <!-- MENTOR VIEW -->
+      <section id="view-mentor" class="tab-content">
+        <div class="flex flex-col h-[70vh] bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+          <div class="bg-amber-100 p-3 flex items-center gap-2">
+            <i data-lucide="lightbulb" class="text-amber-700"></i>
+            <h2 class="font-bold text-amber-900 text-sm">Mentora 24/7</h2>
+          </div>
+          <div id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+            <div class="flex">
+              <div class="bg-white border rounded-xl rounded-tl-sm p-3 text-sm shadow-sm max-w-[85%]">
+                Hola, soy tu mentora. ¿Qué dudas tienes sobre cera o esencias?
+              </div>
+            </div>
+          </div>
+          <div class="p-3 bg-white border-t flex gap-2">
+            <input id="chat-input" type="text" placeholder="Ej: Mi cera hace frosting..." class="flex-1 p-3 bg-slate-100 rounded-full text-sm outline-none">
+            <button onclick="enviarChat()" id="btn-chat" class="p-3 bg-slate-800 text-white rounded-full"><i data-lucide="send" class="w-5 h-5"></i></button>
+          </div>
+        </div>
+      </section>
+      
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 w-full bg-white border-t border-slate-100 flex justify-around p-3 pb-6 sm:pb-3 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
+      <button onclick="switchTab('inventory', this)" class="nav-btn text-rose-600 flex flex-col items-center gap-1">
+        <i data-lucide="box" class="w-6 h-6"></i><span class="text-[10px] font-bold">Inventario</span>
+      </button>
+      <button onclick="switchTab('marketing', this)" class="nav-btn text-slate-400 flex flex-col items-center gap-1">
+        <i data-lucide="sparkles" class="w-6 h-6"></i><span class="text-[10px] font-bold">Marketing</span>
+      </button>
+      <button onclick="switchTab('crm', this)" class="nav-btn text-slate-400 flex flex-col items-center gap-1">
+        <i data-lucide="message-circle-heart" class="w-6 h-6"></i><span class="text-[10px] font-bold">CRM</span>
+      </button>
+      <button onclick="switchTab('mentor', this)" class="nav-btn text-slate-400 flex flex-col items-center gap-1">
+        <i data-lucide="lightbulb" class="w-6 h-6"></i><span class="text-[10px] font-bold">Mentora</span>
+      </button>
+    </nav>
+
+    <script>
+      lucide.createIcons();
+      let chatContext = "";
+
+      // 1. Navigation
+      function switchTab(tabId, btnCtx) {
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById('view-' + tabId).classList.add('active');
+        
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+          btn.classList.remove('text-rose-600', 'text-fuchsia-600', 'text-teal-600', 'text-amber-600');
+          btn.classList.add('text-slate-400');
+        });
+        
+        const colors = { inventory: 'text-rose-600', marketing: 'text-fuchsia-600', crm: 'text-teal-600', mentor: 'text-amber-600'};
+        btnCtx.classList.remove('text-slate-400');
+        btnCtx.classList.add(colors[tabId]);
+      }
+
+      // 2. Load Inventory (Apps Script call)
+      google.script.run.withSuccessHandler(function(data) {
+        const container = document.getElementById('inventory-list');
+        if(!data || data.length === 0) {
+          container.innerHTML = '<div class="text-sm text-slate-500">No hay items en el Sheet o no creaste la pestaña "Inventario" con Item y Cantidad.</div>';
+          return;
+        }
+        container.innerHTML = data.map(row => `
+          <div class="flex justify-between bg-white p-3 rounded-xl border border-rose-50 shadow-sm text-sm">
+            <span class="font-medium text-slate-700">${row.item}</span>
+            <span class="font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">${row.cantidad}</span>
+          </div>
+        `).join('');
+      }).getInventario();
+
+      // 3. Marketing Generator
+      function generarMarketing() {
+        const prod = document.getElementById('mkg-prod').value;
+        const niche = document.getElementById('mkg-niche').value;
+        if(!prod || !niche) return alert("Completa los campos");
+        
+        const btn = document.getElementById('btn-mkg');
+        btn.innerHTML = 'Generando...'; btn.disabled = true;
+        
+        google.script.run.withSuccessHandler(function(res) {
+          document.getElementById('mkg-result-box').classList.remove('hidden');
+          document.getElementById('mkg-res').innerHTML = marked.parse(res);
+          btn.innerHTML = 'Generar Guion'; btn.disabled = false;
+        }).withFailureHandler(function(err) {
+          alert('Error: ' + err.message);
+          btn.innerHTML = 'Generar Guion'; btn.disabled = false;
+        }).generarMarketing(prod, niche);
+      }
+
+      // 4. CRM Generator
+      function generarCRM() {
+        const name = document.getElementById('crm-name').value;
+        const purch = document.getElementById('crm-purch').value;
+        const days = document.getElementById('crm-days').value;
+        if(!name || !purch || !days) return alert("Completa los campos");
+        
+        const btn = document.getElementById('btn-crm');
+        btn.innerHTML = 'Procesando...'; btn.disabled = true;
+        
+        google.script.run.withSuccessHandler(function(res) {
+          document.getElementById('crm-result-box').classList.remove('hidden');
+          document.getElementById('crm-res').innerHTML = marked.parse(res);
+          btn.innerHTML = 'Crear Mensaje'; btn.disabled = false;
+        }).withFailureHandler(function(err) {
+          alert('Error: ' + err.message);
+          btn.innerHTML = 'Crear Mensaje'; btn.disabled = false;
+        }).generarMensajeCRM(name, purch, days);
+      }
+
+      // 5. Mentor Chat
+      function enviarChat() {
+        const inputEl = document.getElementById('chat-input');
+        const text = inputEl.value;
+        if(!text) return;
+        
+        appendMsg(text, 'user');
+        inputEl.value = '';
+        
+        const btn = document.getElementById('btn-chat');
+        btn.innerHTML = '...'; btn.disabled = true;
+
+        google.script.run.withSuccessHandler(function(res) {
+          appendMsg(res, 'mentor');
+          chatContext += `Clienta: ${text}\nMentora: ${res}\n`;
+          btn.innerHTML = '<i data-lucide="send" class="w-5 h-5"></i>'; 
+          lucide.createIcons();
+          btn.disabled = false;
+        }).withFailureHandler(function(err) {
+          appendMsg("❌ Error de AI: " + err.message, 'mentor');
+          btn.innerHTML = '<i data-lucide="send" class="w-5 h-5"></i>'; 
+          lucide.createIcons();
+          btn.disabled = false;
+        }).consultarMentora(chatContext, text);
+      }
+
+      function appendMsg(text, sender) {
+        const box = document.getElementById('chat-box');
+        const align = sender === 'user' ? 'justify-end' : '';
+        const bg = sender === 'user' ? 'bg-slate-800 text-white rounded-br-sm' : 'bg-white border text-slate-800 rounded-bl-sm markdown-body';
+        const parsed = sender === 'mentor' ? marked.parse(text) : text;
+        
+        box.innerHTML += `
+          <div class="flex ${align}">
+            <div class="p-3 text-sm rounded-xl max-w-[85%] shadow-sm ${bg}">
+              ${parsed}
+            </div>
+          </div>
+        `;
+        box.scrollTop = box.scrollHeight;
+      }
+
+      // Utils
+      function copiarTexto(elementId) {
+        const text = document.getElementById(elementId).innerText;
+        navigator.clipboard.writeText(text);
+        alert("Copiado al portapapeles ✅");
+      }
+    </script>
+  </body>
+</html>
