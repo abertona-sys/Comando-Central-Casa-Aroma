@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, MessageCircleHeart, Copy, Check, ShoppingCart, History, Trash2 } from "lucide-react";
+import { Loader2, MessageCircleHeart, Copy, Check, ShoppingCart, History, Trash2, Sparkles } from "lucide-react";
 import { callGemini } from "../lib/gemini";
 import Markdown from "react-markdown";
 import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy, increment, updateDoc, writeBatch } from "firebase/firestore";
@@ -48,16 +48,23 @@ export function CRM() {
 
   useEffect(() => {
     if (!user) return;
+    console.log("CRM: Subscribing to recipes and sales...");
 
     const qRecipes = query(collection(db, `users/${user.uid}/recipes`), orderBy("name", "asc"));
     const unsubRecipes = onSnapshot(qRecipes, (snapshot) => {
       setRecipes(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Recipe)));
+    }, (error) => {
+      console.error("CRM: Recipes error:", error);
+      handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/recipes`);
     });
 
     const qSales = query(collection(db, `users/${user.uid}/sales`), orderBy("createdAt", "desc"));
     const unsubSales = onSnapshot(qSales, (snapshot) => {
       setSales(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Sale)));
       setLoadingHistory(false);
+    }, (error) => {
+      console.error("CRM: Sales error:", error);
+      handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/sales`);
     });
 
     return () => {
@@ -247,8 +254,8 @@ export function CRM() {
             <button onClick={copyToClipboard} className="absolute top-2 right-2 p-1.5 bg-teal-50 text-teal-600 rounded-lg">
               {copied ? <Check className="w-3 h-3 text-green-600" /> : <Copy className="w-3 h-3" />}
             </button>
-            <div className="prose prose-xs text-[11px] leading-snug">
-              <Markdown>{aiResult}</Markdown>
+            <div className="prose prose-xs text-[11px] leading-snug whitespace-pre-wrap">
+              {aiResult}
             </div>
           </div>
         )}
