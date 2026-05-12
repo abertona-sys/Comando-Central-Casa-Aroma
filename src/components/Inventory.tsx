@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { Box, Droplets, Flame, Loader2, Plus, Trash2 } from "lucide-react";
-import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from "firebase/firestore";
+import { Box, Droplets, Flame, Loader2, Plus, Trash2, Minus } from "lucide-react";
+import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy, updateDoc, increment } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../lib/auth";
 import { handleFirestoreError, OperationType } from "../lib/firebaseError";
@@ -8,7 +8,8 @@ import { handleFirestoreError, OperationType } from "../lib/firebaseError";
 interface InventoryItem {
   id: string;
   name: string;
-  quantity: string;
+  quantity: number | string;
+  unit: string;
   iconType: string;
 }
 
@@ -18,6 +19,7 @@ export function Inventory() {
   const [loading, setLoading] = useState(true);
   const [newItemName, setNewItemName] = useState("");
   const [newItemQty, setNewItemQty] = useState("");
+  const [newItemUnit, setNewItemUnit] = useState("unidades");
   const [iconMode, setIconMode] = useState("droplets");
   const [adding, setAdding] = useState(false);
 
@@ -47,9 +49,11 @@ export function Inventory() {
     setAdding(true);
     try {
       const inventoryRef = collection(db, `users/${user.uid}/inventory`);
+      const qtyNumber = parseFloat(newItemQty);
       await addDoc(inventoryRef, {
         name: newItemName,
-        quantity: newItemQty,
+        quantity: isNaN(qtyNumber) ? newItemQty : qtyNumber,
+        unit: newItemUnit,
         iconType: iconMode,
         userId: user.uid,
         createdAt: serverTimestamp(),
@@ -64,8 +68,22 @@ export function Inventory() {
     }
   };
 
+  const handleAdjustQuantity = async (id: string, amount: number) => {
+    if (!user) return;
+    try {
+      const itemRef = doc(db, `users/${user.uid}/inventory`, id);
+      await updateDoc(itemRef, {
+        quantity: increment(amount),
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/inventory/${id}`);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!user) return;
+    if (!confirm("¿Estás segura de eliminar este insumo?")) return;
     try {
       await deleteDoc(doc(db, `users/${user.uid}/inventory`, id));
     } catch (error) {
@@ -98,23 +116,48 @@ export function Inventory() {
         ) : (
           <div className="space-y-3">
             {items.map((item) => (
-              <div key={item.id} className="flex flex-row items-center justify-between bg-white p-4 rounded-xl shadow-sm border border-rose-50 group">
-                <div className="flex flex-row items-center gap-3 overflow-hidden">
-                  <div className="p-2 bg-slate-50 rounded-lg shrink-0">
-                    {renderIcon(item.iconType)}
+              <div key={item.id} className="flex flex-col bg-white p-4 rounded-xl shadow-sm border border-rose-50 group">
+                <div className="flex flex-row items-center justify-between mb-2">
+                  <div className="flex flex-row items-center gap-3 overflow-hidden">
+                    <div className="p-2 bg-slate-50 rounded-lg shrink-0">
+                      {renderIcon(item.iconType)}
+                    </div>
+                    <span className="font-medium text-slate-800 truncate">{item.name}</span>
                   </div>
-                  <span className="font-medium text-slate-800 truncate">{item.name}</span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  <span className="text-rose-600 font-semibold bg-rose-50 px-3 py-1 rounded-full text-sm">
-                    {item.quantity}
-                  </span>
                   <button 
                     onClick={() => handleDelete(item.id)}
-                    className="p-1.5 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                    className="p-1.5 text-rose-200 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                </div>
+                
+                <div className="flex items-center justify-between bg-slate-50 rounded-xl p-2">
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => handleAdjustQuantity(item.id, -1)}
+                      className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-rose-600 hover:border-rose-200 transition-colors shadow-sm"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <div className="px-4 py-1 text-center min-w-[3rem]">
+                      <span className="text-rose-600 font-bold text-lg">
+                        {item.quantity}
+                      </span>
+                      <span className="text-[10px] text-slate-400 block -mt-1 uppercase tracking-wider font-bold">
+                        {item.unit || "uds"}
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => handleAdjustQuantity(item.id, 1)}
+                      className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-600 hover:text-green-600 hover:border-green-200 transition-colors shadow-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="text-[10px] text-slate-300 italic px-2">
+                    Ajuste rápido
+                  </div>
                 </div>
               </div>
             ))}
@@ -123,54 +166,75 @@ export function Inventory() {
       </div>
 
       <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm">
-        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
-          <Plus className="w-4 h-4 text-slate-400" />
+        <h3 className="font-semibold text-slate-800 mb-4 flex items-center gap-2 text-sm uppercase tracking-wider">
+          <Plus className="w-4 h-4 text-rose-500" />
           Nuevo Insumo
         </h3>
         <form onSubmit={handleAddItem} className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-slate-500 mb-1 block">Nombre del Insumo</label>
+            <label className="text-xs font-semibold text-slate-500 mb-1 block capitalize">Nombre del Insumo</label>
             <input 
               type="text"
               value={newItemName}
               onChange={(e) => setNewItemName(e.target.value)}
               placeholder="Ej. Cera de Soja"
-              className="w-full bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all"
+              className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all font-medium"
               required
             />
           </div>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Cantidad</label>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block capitalize">Cantidad Inicial</label>
               <input 
-                type="text"
+                type="number"
+                step="any"
                 value={newItemQty}
                 onChange={(e) => setNewItemQty(e.target.value)}
-                placeholder="Ej. 10 kg"
-                className="w-full bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all"
+                placeholder="0"
+                className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all font-medium"
                 required
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-500 mb-1 block">Icono</label>
+              <label className="text-xs font-semibold text-slate-500 mb-1 block capitalize">Unidad</label>
               <select 
-                value={iconMode} 
-                onChange={(e) => setIconMode(e.target.value)}
-                className="w-24 bg-slate-50 border border-slate-200 px-3 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all"
+                value={newItemUnit} 
+                onChange={(e) => setNewItemUnit(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 px-3 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all font-medium"
               >
-                <option value="droplets">Gotas</option>
-                <option value="flame">Fuego</option>
-                <option value="box">Caja</option>
+                <option value="unidades">Unidades</option>
+                <option value="gramos">Gramos (g)</option>
+                <option value="kilos">Kilos (kg)</option>
+                <option value="ml">Mililitros (ml)</option>
               </select>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-500 mb-1 block capitalize">Icono Visual</label>
+            <div className="flex gap-2">
+              {["droplets", "flame", "box"].map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setIconMode(type)}
+                  className={`flex-1 p-3 rounded-xl border transition-all flex justify-center ${
+                    iconMode === type 
+                      ? "border-rose-500 bg-rose-50 ring-2 ring-rose-200" 
+                      : "border-slate-200 bg-slate-50 opacity-60"
+                  }`}
+                >
+                  {renderIcon(type)}
+                </button>
+              ))}
             </div>
           </div>
           <button 
             type="submit" 
             disabled={adding || !newItemName || !newItemQty}
-            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 rounded-xl text-sm transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.98]"
+            className="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-2xl text-sm transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            Agregar 
+            {adding ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+            AGREGAR AL INVENTARIO
           </button>
         </form>
       </div>

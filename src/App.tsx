@@ -1,22 +1,24 @@
 import { useState } from "react";
-import { Box, Sparkles, MessageCircleHeart, Lightbulb, LogIn, Loader2, LogOut } from "lucide-react";
+import { Box, Sparkles, MessageCircleHeart, Lightbulb, LogIn, Loader2, LogOut, ChefHat } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Inventory } from "./components/Inventory";
+import { Recipes } from "./components/Recipes";
 import { Marketing } from "./components/Marketing";
 import { CRM } from "./components/CRM";
 import { Mentor } from "./components/Mentor";
 import { useAuth } from "./lib/auth";
 
-type Tab = "inventory" | "marketing" | "crm" | "mentor";
+type Tab = "inventory" | "recipes" | "marketing" | "crm" | "mentor";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>("inventory");
   const { user, loading, error, signIn, logOut } = useAuth();
 
   const tabs = [
-    { id: "inventory", label: "Inventario", icon: Box },
+    { id: "inventory", label: "Stock", icon: Box },
+    { id: "recipes", label: "Recetas", icon: ChefHat },
     { id: "marketing", label: "Marketing", icon: Sparkles },
-    { id: "crm", label: "CRM", icon: MessageCircleHeart },
+    { id: "crm", label: "Ventas", icon: MessageCircleHeart },
     { id: "mentor", label: "Mentora", icon: Lightbulb },
   ] as const;
 
@@ -94,6 +96,7 @@ export default function App() {
               transition={{ duration: 0.2 }}
             >
               {activeTab === "inventory" && <Inventory />}
+              {activeTab === "recipes" && <Recipes />}
               {activeTab === "marketing" && <Marketing />}
               {activeTab === "crm" && <CRM />}
               {activeTab === "mentor" && <Mentor />}
