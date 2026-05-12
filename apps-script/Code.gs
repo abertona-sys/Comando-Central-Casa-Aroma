@@ -39,7 +39,7 @@ function llamarGemini(prompt, systemInstruction) {
     throw new Error("Falta la GEMINI_API_KEY en las propiedades del script.");
   }
   
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
   
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
@@ -71,7 +71,7 @@ function llamarGemini(prompt, systemInstruction) {
 
 // 4. Módulo Marketing
 function generarMarketing(producto, nicho) {
-  const prompt = `Producto: ${producto}\nNicho u Ocasión: ${niche}`;
+  const prompt = `Producto: ${producto}\nNicho u Ocasión: ${nicho}`;
   const sysPrompt = "Eres un Experto Copywriter de respuesta directa especializado en venta de productos aromáticos artesanales. Tu objetivo es escribir un guion para un Reel de Instagram/TikTok de exactamente 15 segundos. Debe ser un guion muy visual (qué se muestra en cámara) y muy persuasivo (qué texto va en pantalla o voz en off). El tono debe ser femenino, cálido, pero altamente vendedor. Estructura el guion: [0-3s Gancho], [4-10s Cuerpo/Propuesta], [11-15s Llamado a la Acción].";
   return llamarGemini(prompt, sysPrompt);
 }
