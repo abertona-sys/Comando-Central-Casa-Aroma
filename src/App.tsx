@@ -11,7 +11,7 @@ type Tab = "inventory" | "marketing" | "crm" | "mentor";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>("inventory");
-  const { user, loading, signIn, logOut } = useAuth();
+  const { user, loading, error, signIn, logOut } = useAuth();
 
   const tabs = [
     { id: "inventory", label: "Inventario", icon: Box },
@@ -24,6 +24,18 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-rose-500" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-red-100 text-center space-y-4">
+          <div className="text-red-500 font-bold">⚠️ Error de Configuración</div>
+          <p className="text-slate-500 text-sm">{error}</p>
+          <p className="text-xs text-slate-400">Si estás en Vercel, asegúrate de haber incluido todos los archivos y configurado las variables de entorno.</p>
+        </div>
       </div>
     );
   }
