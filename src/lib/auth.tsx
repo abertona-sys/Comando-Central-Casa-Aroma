@@ -60,6 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await signInWithPopup(auth, provider);
     } catch (err: any) {
       console.error("Error sign in:", err);
+      if (err.code === "auth/unauthorized-domain") {
+        setError("Error: El dominio de esta web no está autorizado en Firebase. Añade '" + window.location.hostname + "' a los Dominios Autorizados en la Consola de Firebase.");
+      } else {
+        setError("Error al iniciar sesión: " + (err.message || "Error desconocido"));
+      }
     }
   };
 
