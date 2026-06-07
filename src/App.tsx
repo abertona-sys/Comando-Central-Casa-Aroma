@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Box, Sparkles, MessageCircleHeart, Lightbulb, LogIn, Loader2, LogOut, ChefHat } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Inventory } from "./components/Inventory";
@@ -11,8 +11,17 @@ import { useAuth } from "./lib/auth";
 type Tab = "inventory" | "recipes" | "marketing" | "crm" | "mentor";
 
 export default function App() {
+  const [selectedTab, setSelectedTab] = useState<Tab>("inventory");
   const [activeTab, setActiveTab] = useState<Tab>("inventory");
+  const [isPending, startTransition] = useTransition();
   const { user, loading, error, signIn, logOut } = useAuth();
+
+  const handleTabChange = (tabId: Tab) => {
+    setSelectedTab(tabId);
+    startTransition(() => {
+      setActiveTab(tabId);
+    });
+  };
 
   const tabs = [
     { id: "inventory", label: "Stock", icon: Box },
@@ -109,11 +118,11 @@ export default function App() {
           <div className="flex justify-around items-center">
             {tabs.map((tab) => {
               const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
+              const isActive = selectedTab === tab.id;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   className={`flex flex-col items-center gap-1 p-2 rounded-2xl w-20 transition-all ${
                     isActive ? "text-rose-600 bg-rose-50/50" : "text-slate-400 hover:text-slate-600"
                   }`}

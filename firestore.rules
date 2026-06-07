@@ -11,19 +11,38 @@ service cloud.firestore {
     
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
-    function isSignedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function isSignedIn() { return request.auth != null; }
 
     function isValidInventoryItem(data) {
-      return data.keys().hasAll(['name', 'quantity', 'userId', 'iconType', 'createdAt', 'updatedAt']) &&
-             data.keys().size() == 6 &&
+      return data.keys().hasAll(['name', 'quantity', 'unit', 'iconType', 'userId', 'createdAt', 'updatedAt']) &&
+             data.keys().size() == 7 &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
-             data.quantity is string && data.quantity.size() > 0 && data.quantity.size() <= 50 &&
-             data.userId is string && data.userId == request.auth.uid &&
-             data.iconType is string && data.iconType.size() <= 50;
+             (data.quantity is number || data.quantity is string) &&
+             data.unit is string && data.unit.size() <= 50 &&
+             data.iconType is string && data.iconType.size() <= 50 &&
+             data.userId is string && data.userId == request.auth.uid;
+    }
+
+    function isValidRecipe(data) {
+      return data.keys().hasAll(['name', 'ingredients', 'createdAt', 'userId']) &&
+             data.keys().size() == 4 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+             data.ingredients is list && data.ingredients.size() <= 50 &&
+             data.userId is string && data.userId == request.auth.uid;
+    }
+
+    function isValidSale(data) {
+      return data.keys().hasAll(['clientName', 'productName', 'recipeId', 'quantity', 'userId', 'createdAt']) &&
+             data.keys().size() == 6 &&
+             data.clientName is string && data.clientName.size() > 0 && data.clientName.size() <= 150 &&
+             data.productName is string && data.productName.size() > 0 && data.productName.size() <= 150 &&
+             data.recipeId is string &&
+             data.quantity is number &&
+             data.userId is string && data.userId == request.auth.uid;
     }
 
     match /users/{userId}/inventory/{itemId} {
-      allow read: if isSignedIn() && userId == request.auth.uid;
+      allow read, list: if isSignedIn() && userId == request.auth.uid;
       allow create: if isSignedIn() 
                     && isValidId(userId) && userId == request.auth.uid
                     && isValidId(itemId) 
@@ -34,10 +53,44 @@ service cloud.firestore {
                     && isValidId(userId) && userId == request.auth.uid
                     && isValidId(itemId)
                     && isValidInventoryItem(incoming())
-                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'quantity', 'iconType', 'updatedAt'])
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'quantity', 'unit', 'iconType', 'updatedAt'])
                     && incoming().userId == existing().userId
                     && incoming().createdAt == existing().createdAt
                     && incoming().updatedAt == request.time;
+      allow delete: if isSignedIn() && userId == request.auth.uid;
+    }
+
+    match /users/{userId}/recipes/{recipeId} {
+      allow read, list: if isSignedIn() && userId == request.auth.uid;
+      allow create: if isSignedIn()
+                    && isValidId(userId) && userId == request.auth.uid
+                    && isValidId(recipeId)
+                    && isValidRecipe(incoming())
+                    && incoming().createdAt == request.time;
+      allow update: if isSignedIn()
+                    && isValidId(userId) && userId == request.auth.uid
+                    && isValidId(recipeId)
+                    && isValidRecipe(incoming())
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'ingredients'])
+                    && incoming().userId == existing().userId
+                    && incoming().createdAt == existing().createdAt;
+      allow delete: if isSignedIn() && userId == request.auth.uid;
+    }
+
+    match /users/{userId}/sales/{saleId} {
+      allow read, list: if isSignedIn() && userId == request.auth.uid;
+      allow create: if isSignedIn()
+                    && isValidId(userId) && userId == request.auth.uid
+                    && isValidId(saleId)
+                    && isValidSale(incoming())
+                    && incoming().createdAt == request.time;
+      allow update: if isSignedIn()
+                    && isValidId(userId) && userId == request.auth.uid
+                    && isValidId(saleId)
+                    && isValidSale(incoming())
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['clientName', 'productName', 'recipeId', 'quantity'])
+                    && incoming().userId == existing().userId
+                    && incoming().createdAt == existing().createdAt;
       allow delete: if isSignedIn() && userId == request.auth.uid;
     }
   }

@@ -9,6 +9,9 @@
           "type": "string"
         },
         "quantity": {
+          "type": "number"
+        },
+        "unit": {
           "type": "string"
         },
         "iconType": {
@@ -26,13 +29,69 @@
           "format": "date-time"
         }
       },
-      "required": ["name", "quantity", "userId", "createdAt", "updatedAt"]
+      "required": ["name", "quantity", "unit", "iconType", "userId", "createdAt", "updatedAt"]
+    },
+    "Recipe": {
+      "title": "Recipe",
+      "description": "A recipe template defining ingredients consumptions for a product",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "ingredients": {
+          "type": "array"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["name", "ingredients", "userId", "createdAt"]
+    },
+    "Sale": {
+      "title": "Sale Record",
+      "description": "A track-record of a completed product sale",
+      "type": "object",
+      "properties": {
+        "clientName": {
+          "type": "string"
+        },
+        "productName": {
+          "type": "string"
+        },
+        "recipeId": {
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["clientName", "productName", "recipeId", "quantity", "userId", "createdAt"]
     }
   },
   "firestore": {
     "users/{userId}/inventory/{itemId}": {
       "schema": "InventoryItem",
       "description": "Stores inventory items for a specific user."
+    },
+    "users/{userId}/recipes/{recipeId}": {
+      "schema": "Recipe",
+      "description": "Stores recipes defining materials for products."
+    },
+    "users/{userId}/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "Stores logs of sales and client records."
     }
   }
 }
