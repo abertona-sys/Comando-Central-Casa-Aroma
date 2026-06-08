@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BookOpen, Plus, Trash2, Loader2, Save, ShoppingBag } from "lucide-react";
+import { BookOpen, Plus, Trash2, Loader2, Save, ShoppingBag, CircleAlert } from "lucide-react";
 import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../lib/auth";
@@ -29,6 +29,7 @@ export function Recipes() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
   // States for new recipe
   const [recipeName, setRecipeName] = useState("");
@@ -45,7 +46,14 @@ export function Recipes() {
       const list = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Recipe));
       setRecipes(list);
       setLoading(false);
-    }, (error) => handleFirestoreError(error, OperationType.LIST, "recipes"));
+    }, (error) => {
+      try {
+        handleFirestoreError(error, OperationType.LIST, "recipes");
+      } catch (err) {
+        console.error("List recipes snapshot failed:", err);
+      }
+      setLoading(false);
+    });
 
     const qInv = query(collection(db, `users/${user.uid}/inventory`), orderBy("name", "asc"));
     const unsubInv = onSnapshot(qInv, (snapshot) => {
@@ -89,6 +97,7 @@ export function Recipes() {
     if (!user || !recipeName || newRecipeIngredients.length === 0) return;
 
     setSaving(true);
+    setErrorMsg(null);
     try {
       await addDoc(collection(db, `users/${user.uid}/recipes`), {
         name: recipeName,
@@ -98,8 +107,13 @@ export function Recipes() {
       });
       setRecipeName("");
       setNewRecipeIngredients([]);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, "recipes");
+      setErrorMsg(null);
+    } catch (error: any) {
+      console.error("Error creating recipe:", error);
+      setErrorMsg("No se pudo crear la receta. Verifica que tus reglas de base de datos estén cargadas.");
+      try {
+        handleFirestoreError(error, OperationType.CREATE, "recipes");
+      } catch (err) {}
     } finally {
       setSaving(false);
     }
@@ -107,15 +121,30 @@ export function Recipes() {
 
   const handleDeleteRecipe = async (id: string) => {
     if (!user || !confirm("¿Eliminar esta receta?")) return;
+    setErrorMsg(null);
     try {
       await deleteDoc(doc(db, `users/${user.uid}/recipes`, id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `recipes/${id}`);
+    } catch (error: any) {
+      console.error("Error deleting recipe:", error);
+      setErrorMsg("No se pudo eliminar la receta.");
+      try {
+        handleFirestoreError(error, OperationType.DELETE, `recipes/${id}`);
+      } catch (err) {}
     }
   };
 
   return (
     <div className="space-y-6 pb-24">
+      {errorMsg && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl flex items-start gap-3 text-sm shadow-sm animate-in fade-in">
+          <CircleAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <span className="font-bold block">Aviso del Sistema</span>
+            <p className="text-xs leading-relaxed">{errorMsg}</p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-gradient-to-br from-indigo-100 to-violet-50 p-6 rounded-3xl border border-indigo-200">
         <BookOpen className="w-8 h-8 text-indigo-600 mb-3" />
         <h2 className="text-2xl font-bold text-indigo-950 mb-2">Recetario Maestro</h2>

@@ -15,12 +15,13 @@ service cloud.firestore {
 
     function isValidInventoryItem(data) {
       return data.keys().hasAll(['name', 'quantity', 'unit', 'iconType', 'userId', 'createdAt', 'updatedAt']) &&
-             data.keys().size() == 7 &&
+             data.keys().size() >= 7 && data.keys().size() <= 8 &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
              (data.quantity is number || data.quantity is string) &&
              data.unit is string && data.unit.size() <= 50 &&
              data.iconType is string && data.iconType.size() <= 50 &&
-             data.userId is string && data.userId == request.auth.uid;
+             data.userId is string && data.userId == request.auth.uid &&
+             (!data.keys().hasAll(['price']) || (data.price is number || data.price == null));
     }
 
     function isValidRecipe(data) {
@@ -53,7 +54,7 @@ service cloud.firestore {
                     && isValidId(userId) && userId == request.auth.uid
                     && isValidId(itemId)
                     && isValidInventoryItem(incoming())
-                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'quantity', 'unit', 'iconType', 'updatedAt'])
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['name', 'quantity', 'unit', 'iconType', 'price', 'updatedAt'])
                     && incoming().userId == existing().userId
                     && incoming().createdAt == existing().createdAt
                     && incoming().updatedAt == request.time;

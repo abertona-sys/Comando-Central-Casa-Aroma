@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Box, Droplets, Flame, Loader2, Plus, Trash2, Minus } from "lucide-react";
+import { Box, Droplets, Flame, Loader2, Plus, Trash2, Minus, CircleAlert } from "lucide-react";
 import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy, updateDoc, increment } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../lib/auth";
@@ -11,6 +11,7 @@ interface InventoryItem {
   quantity: number | string;
   unit: string;
   iconType: string;
+  price?: number;
 }
 
 export function Inventory() {
@@ -20,8 +21,10 @@ export function Inventory() {
   const [newItemName, setNewItemName] = useState("");
   const [newItemQty, setNewItemQty] = useState("");
   const [newItemUnit, setNewItemUnit] = useState("unidades");
+  const [newItemPrice, setNewItemPrice] = useState("");
   const [iconMode, setIconMode] = useState("droplets");
   const [adding, setAdding] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -36,7 +39,13 @@ export function Inventory() {
       setItems(loadedItems);
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/inventory`);
+      // Log the error using handleFirestoreError for debug/monitoring but don't let it crash react thread
+      try {
+        handleFirestoreError(error, OperationType.LIST, `users/${user?.uid}/inventory`);
+      } catch (e: any) {
+        console.error("Error loaded snapshot:", e.message);
+        setErrorMsg("Error de conexión con la base de datos de Firebase. Por favor verifica las reglas.");
+      }
       setLoading(false);
     });
 
@@ -47,10 +56,13 @@ export function Inventory() {
     e.preventDefault();
     if (!newItemName || !newItemQty || !user) return;
     setAdding(true);
+    setErrorMsg(null);
     try {
       const inventoryRef = collection(db, `users/${user.uid}/inventory`);
       const qtyNumber = parseFloat(newItemQty);
-      await addDoc(inventoryRef, {
+      const priceNumber = newItemPrice ? parseFloat(newItemPrice) : null;
+      
+      const payload: any = {
         name: newItemName,
         quantity: isNaN(qtyNumber) ? newItemQty : qtyNumber,
         unit: newItemUnit,
@@ -58,11 +70,28 @@ export function Inventory() {
         userId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      });
+      };
+
+      if (priceNumber !== null && !isNaN(priceNumber)) {
+        payload.price = priceNumber;
+      }
+
+      await addDoc(inventoryRef, payload);
+      
       setNewItemName("");
       setNewItemQty("");
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/inventory`);
+      setNewItemPrice("");
+      setErrorMsg(null);
+    } catch (error: any) {
+      console.error("Error direct inside component handleAddItem:", error);
+      setErrorMsg("No se pudo agregar el insumo. Esto suele deberse a que las reglas de seguridad de Firebase aún no están del todo sincronizadas o configuradas.");
+      
+      // To satisfy skill logging requirements, process the error
+      try {
+        handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/inventory`);
+      } catch (err) {
+        // Suppress nested throw to avoid crashing react tree
+      }
     } finally {
       setAdding(false);
     }
@@ -70,24 +99,34 @@ export function Inventory() {
 
   const handleAdjustQuantity = async (id: string, amount: number) => {
     if (!user) return;
+    setErrorMsg(null);
     try {
       const itemRef = doc(db, `users/${user.uid}/inventory`, id);
       await updateDoc(itemRef, {
         quantity: increment(amount),
         updatedAt: serverTimestamp()
       });
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/inventory/${id}`);
+    } catch (error: any) {
+      console.error("Error adjusting quantity:", error);
+      setErrorMsg("No se pudo actualizar la cantidad. Intenta de nuevo.");
+      try {
+        handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}/inventory/${id}`);
+      } catch (err) {}
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!user) return;
     if (!confirm("¿Estás segura de eliminar este insumo?")) return;
+    setErrorMsg(null);
     try {
       await deleteDoc(doc(db, `users/${user.uid}/inventory`, id));
-    } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/inventory/${id}`);
+    } catch (error: any) {
+      console.error("Error deleting item:", error);
+      setErrorMsg("No se pudo eliminar el insumo.");
+      try {
+        handleFirestoreError(error, OperationType.DELETE, `users/${user.uid}/inventory/${id}`);
+      } catch (err) {}
     }
   };
 
@@ -101,6 +140,16 @@ export function Inventory() {
 
   return (
     <div className="space-y-6 pb-20">
+      {errorMsg && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl flex items-start gap-3 text-sm shadow-sm">
+          <CircleAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <span className="font-bold block">Aviso del Sistema</span>
+            <p className="text-xs leading-relaxed">{errorMsg}</p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-rose-50 border border-rose-100 p-6 rounded-3xl">
         <h2 className="text-xl font-semibold text-rose-900 mb-1">Inventario Actual</h2>
         <p className="text-sm text-rose-700 mb-6">Gestiona tus insumos para placas aromáticas.</p>
@@ -122,7 +171,14 @@ export function Inventory() {
                     <div className="p-2 bg-slate-50 rounded-lg shrink-0">
                       {renderIcon(item.iconType)}
                     </div>
-                    <span className="font-medium text-slate-800 truncate">{item.name}</span>
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-medium text-slate-800 truncate">{item.name}</span>
+                      {item.price !== undefined && item.price !== null && (
+                        <span className="text-[11px] text-emerald-600 font-semibold mt-0.5">
+                          Precio: ${item.price} / {item.unit || "uds"}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <button 
                     onClick={() => handleDelete(item.id)}
@@ -177,11 +233,12 @@ export function Inventory() {
               type="text"
               value={newItemName}
               onChange={(e) => setNewItemName(e.target.value)}
-              placeholder="Ej. Cera de Soja"
+              placeholder="Ej. Cera de Soja o Esencia de Vainilla"
               className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all font-medium"
               required
             />
           </div>
+          
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-slate-500 mb-1 block capitalize">Cantidad Inicial</label>
@@ -209,6 +266,19 @@ export function Inventory() {
               </select>
             </div>
           </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-500 mb-1 block capitalize">Precio / Costo Estimado ($)</label>
+            <input 
+              type="number"
+              step="any"
+              value={newItemPrice}
+              onChange={(e) => setNewItemPrice(e.target.value)}
+              placeholder="Ej. 1500 (Opcional)"
+              className="w-full bg-slate-50 border border-slate-200 px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-300 transition-all font-medium"
+            />
+          </div>
+
           <div>
             <label className="text-xs font-semibold text-slate-500 mb-1 block capitalize">Icono Visual</label>
             <div className="flex gap-2">
@@ -228,6 +298,7 @@ export function Inventory() {
               ))}
             </div>
           </div>
+          
           <button 
             type="submit" 
             disabled={adding || !newItemName || !newItemQty}

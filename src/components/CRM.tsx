@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, MessageCircleHeart, Copy, Check, ShoppingCart, History, Trash2, Sparkles } from "lucide-react";
+import { Loader2, MessageCircleHeart, Copy, Check, ShoppingCart, History, Trash2, Sparkles, CircleAlert } from "lucide-react";
 import { callGemini } from "../lib/gemini";
 import Markdown from "react-markdown";
 import { collection, onSnapshot, addDoc, deleteDoc, doc, serverTimestamp, query, orderBy, increment, updateDoc, writeBatch } from "firebase/firestore";
@@ -36,6 +36,7 @@ export function CRM() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   
   // AI Message generation state
   const [lastPurchase, setLastPurchase] = useState("");
@@ -55,7 +56,9 @@ export function CRM() {
       setRecipes(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Recipe)));
     }, (error) => {
       console.error("CRM: Recipes error:", error);
-      handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/recipes`);
+      try {
+        handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/recipes`);
+      } catch (err) {}
     });
 
     const qSales = query(collection(db, `users/${user.uid}/sales`), orderBy("createdAt", "desc"));
@@ -64,7 +67,9 @@ export function CRM() {
       setLoadingHistory(false);
     }, (error) => {
       console.error("CRM: Sales error:", error);
-      handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/sales`);
+      try {
+        handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/sales`);
+      } catch (err) {}
     });
 
     return () => {
@@ -78,6 +83,7 @@ export function CRM() {
     if (!user || !clientName || !selectedRecipeId || !saleQty) return;
 
     setRecordingSale(true);
+    setErrorMsg(null);
     try {
       const qty = parseInt(saleQty);
       const recipe = recipes.find(r => r.id === selectedRecipeId);
@@ -112,10 +118,14 @@ export function CRM() {
       setClientName("");
       setSelectedRecipeId("");
       setSaleQty("1");
+      setErrorMsg(null);
       alert("¡Venta registrada y stock descontado con éxito!");
     } catch (error: any) {
       console.error("Error registering sale:", error);
-      alert("Error al registrar: " + error.message);
+      setErrorMsg("Ocurrió un error al registrar la venta. Esto puede ocurrir si un insumo requerido fue eliminado o si no posees los permisos suficientes.");
+      try {
+        handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/sales`);
+      } catch (err) {}
     } finally {
       setRecordingSale(false);
     }
@@ -158,6 +168,16 @@ export function CRM() {
 
   return (
     <div className="space-y-6 pb-24">
+      {errorMsg && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-2xl flex items-start gap-3 text-sm shadow-sm animate-in fade-in">
+          <CircleAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <span className="font-bold block">Aviso del Sistema</span>
+            <p className="text-xs leading-relaxed">{errorMsg}</p>
+          </div>
+        </div>
+      )}
+
       <div className="bg-gradient-to-br from-teal-100 to-emerald-50 p-6 rounded-3xl border border-teal-200">
         <ShoppingCart className="w-8 h-8 text-teal-600 mb-3" />
         <h2 className="text-2xl font-bold text-teal-950 mb-2">Registro de Ventas</h2>

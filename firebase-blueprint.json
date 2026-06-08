@@ -17,6 +17,9 @@
         "iconType": {
           "type": "string"
         },
+        "price": {
+          "type": "number"
+        },
         "userId": {
           "type": "string"
         },
