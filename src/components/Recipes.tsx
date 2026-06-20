@@ -38,6 +38,8 @@ export function Recipes() {
   const [newRecipeIngredients, setNewRecipeIngredients] = useState<RecipeIngredient[]>([]);
   const [saving, setSaving] = useState(false);
 
+  const selectedItem = inventoryItems.find(i => i.id === selectedIngredient);
+
   useEffect(() => {
     if (!user) return;
 
@@ -110,9 +112,10 @@ export function Recipes() {
       setErrorMsg(null);
     } catch (error: any) {
       console.error("Error creating recipe:", error);
-      setErrorMsg("No se pudo crear la receta. Verifica que tus reglas de base de datos estén cargadas.");
+      const detail = error.message || String(error);
+      setErrorMsg(`No se pudo crear la receta. Detalle del error: ${detail}`);
       try {
-        handleFirestoreError(error, OperationType.CREATE, "recipes");
+        handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}/recipes`);
       } catch (err) {}
     } finally {
       setSaving(false);
@@ -174,7 +177,7 @@ export function Recipes() {
 
           <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-3">
             <label className="text-xs font-bold text-indigo-600 block uppercase tracking-tight">Agregar Insumos Necesarios</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               <select 
                 value={selectedIngredient}
                 onChange={(e) => setSelectedIngredient(e.target.value)}
@@ -185,27 +188,43 @@ export function Recipes() {
                   <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>
                 ))}
               </select>
-              <input 
-                type="number"
-                step="any"
-                value={ingredientAmount}
-                onChange={(e) => setIngredientAmount(e.target.value)}
-                placeholder="Cant."
-                className="w-20 bg-white border border-indigo-200 px-3 py-2.5 rounded-xl text-sm"
-              />
+              
+              <div className="relative flex items-center min-w-[100px] flex-1">
+                <input 
+                  type="number"
+                  step="any"
+                  value={ingredientAmount}
+                  onChange={(e) => setIngredientAmount(e.target.value)}
+                  placeholder={selectedItem ? `En ${selectedItem.unit}` : "Cant."}
+                  className="w-full bg-white border border-indigo-200 pl-3 pr-16 py-2.5 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+                {selectedItem && (
+                  <span className="absolute right-3 text-[10px] bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded text-indigo-600 font-bold lowercase">
+                    {selectedItem.unit}
+                  </span>
+                )}
+              </div>
+
               <button 
                 type="button"
                 onClick={addIngredientToTemp}
-                className="bg-indigo-600 text-white p-2.5 rounded-xl hover:bg-indigo-700"
+                disabled={!selectedIngredient || !ingredientAmount}
+                className="bg-indigo-600 text-white p-2.5 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-all"
               >
                 <Plus className="w-5 h-5" />
               </button>
             </div>
 
+            {selectedItem && (
+              <p className="text-[11px] text-indigo-700 bg-indigo-50/50 px-3 py-2 rounded-xl border border-indigo-100/80 animate-in fade-in transition-all">
+                💡 Este insumo se mide en <span className="font-extrabold underline uppercase">{selectedItem.unit}</span>. Asegúrate de ingresar el valor adecuado para esta unidad.
+              </p>
+            )}
+
             <div className="space-y-2 mt-2">
               {newRecipeIngredients.map((ing, idx) => (
                 <div key={idx} className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-indigo-100 text-xs font-medium text-slate-700">
-                  <span>{ing.itemName}: <span className="text-indigo-600">{ing.amount} {ing.unit}</span></span>
+                  <span>{ing.itemName}: <span className="text-indigo-600 font-bold">{ing.amount} {ing.unit}</span></span>
                   <button type="button" onClick={() => removeIngredientFromTemp(idx)} className="text-rose-400">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -252,8 +271,8 @@ export function Recipes() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {recipe.ingredients.map((ing, i) => (
-                    <span key={i} className="bg-slate-50 text-slate-600 text-[10px] px-2 py-1 rounded-lg border border-slate-100">
-                      {ing.itemName}: {ing.amount}{ing.unit}
+                    <span key={i} className="bg-slate-50 text-slate-600 text-[10px] px-2.5 py-1 rounded-lg border border-slate-100 uppercase tracking-tight">
+                      {ing.itemName}: <span className="text-indigo-600 font-bold">{ing.amount} {ing.unit}</span>
                     </span>
                   ))}
                 </div>

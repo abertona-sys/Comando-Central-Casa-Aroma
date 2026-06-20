@@ -15,7 +15,6 @@ service cloud.firestore {
 
     function isValidInventoryItem(data) {
       return data.keys().hasAll(['name', 'quantity', 'unit', 'iconType', 'userId', 'createdAt', 'updatedAt']) &&
-             data.keys().size() >= 7 && data.keys().size() <= 8 &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
              (data.quantity is number || data.quantity is string) &&
              data.unit is string && data.unit.size() <= 50 &&
@@ -26,7 +25,6 @@ service cloud.firestore {
 
     function isValidRecipe(data) {
       return data.keys().hasAll(['name', 'ingredients', 'createdAt', 'userId']) &&
-             data.keys().size() == 4 &&
              data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
              data.ingredients is list && data.ingredients.size() <= 50 &&
              data.userId is string && data.userId == request.auth.uid;
@@ -34,7 +32,6 @@ service cloud.firestore {
 
     function isValidSale(data) {
       return data.keys().hasAll(['clientName', 'productName', 'recipeId', 'quantity', 'userId', 'createdAt']) &&
-             data.keys().size() == 6 &&
              data.clientName is string && data.clientName.size() > 0 && data.clientName.size() <= 150 &&
              data.productName is string && data.productName.size() > 0 && data.productName.size() <= 150 &&
              data.recipeId is string &&
